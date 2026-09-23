@@ -39,13 +39,39 @@ Usage inside Telegram
 import json
 import os
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 TOKEN = os.environ.get("BOT_TOKEN", "").strip()
 if not TOKEN:
     sys.exit("BOT_TOKEN is not set. Run: export BOT_TOKEN='your-token'")
+
+
+# --------------------------------------------------------------------------
+# Minimal HTTP server (only so Render's free "Web Service" tier is happy --
+# Render requires something to listen on $PORT. The bot itself talks to
+# Telegram via long polling in a background thread below and does not use
+# HTTP requests coming into this server at all.)
+# --------------------------------------------------------------------------
+
+class _PingHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"slideshow_bot is running")
+
+    def log_message(self, format, *args):
+        pass  # keep Render logs clean of ping noise
+
+
+def start_ping_server():
+    port = int(os.environ.get("PORT", "10000"))
+    server = HTTPServer(("0.0.0.0", port), _PingHandler)
+    server.serve_forever()
 
 API = "https://api.telegram.org/bot{}/".format(TOKEN)
 STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slideshow_bot_state.json")
@@ -255,6 +281,8 @@ def handle_update(update):
 # --------------------------------------------------------------------------
 
 def main():
+    threading.Thread(target=start_ping_server, daemon=True).start()
+
     me = call("getMe")
     if not me:
         sys.exit("Couldn't reach Telegram. Check the token and your connection.")
