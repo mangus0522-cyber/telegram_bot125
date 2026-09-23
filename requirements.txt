@@ -1,0 +1,3 @@
+# slideshow_bot.py faqat Python standart kutubxonalaridan foydalanadi
+# (json, os, sys, time, urllib) - shuning uchun tashqi paket shart emas.
+# Bu fayl Render talab qilgani uchun qo'shildi, bo'sh qoldirsa ham bo'ladi.
